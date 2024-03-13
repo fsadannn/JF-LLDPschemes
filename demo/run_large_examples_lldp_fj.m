@@ -9,7 +9,7 @@
 close all;
 clear all;
 
-abspath = which('run_examples_lldp_fj');
+abspath = which('run_large_examples_lldp_fj');
 pos = strfind(abspath, filesep); pos = pos(end);
 abspath = abspath(1:pos - 1);
 
@@ -18,11 +18,7 @@ cd(sprintf('%s%s%s',abspath,filesep,'..'));
 s = [
  [abspath,filesep,'..',filesep,'demo;']...,
  [abspath,filesep,'..',filesep,'llint;']...,
- [abspath,filesep,'Brusselator;']...,
  [abspath,filesep,'Brusselator2D;']...,
- [abspath,filesep,'Burgers;']...,
- [abspath,filesep,'CUSP;']...,
- [abspath,filesep,'DND;']...,
  [abspath,filesep,'GrayScott2D;']...,
  [abspath,filesep,'utiles;']
 ];
@@ -30,9 +26,5 @@ s = [
 path(s,path);
 initllPaths(true);
 
-cusp_example;
-bg_example;
-br2d_example;
-gs2d_example;
-br_example;
-dnd_example;
+br2d_example_large;
+gs2d_example_large;

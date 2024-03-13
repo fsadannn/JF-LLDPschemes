@@ -1,24 +1,23 @@
-function [yinterp,ypinterp] = ntrpLLRK45_Krilov_fj(tinterp,t,y,h,f,idxNonNegative,Fx,F,kdim)
+function [yinterp,ypinterp] = ntrpLLRK45_Krilov(tinterp,t,y,h,f,idxNonNegative,Fx,F,kdim)
 %NTRP45  Interpolation helper function for ODE45.
-%   YINTERP = ntrpLLRK45_Krilov_fj(TINTERP,T,Y,TNEW,YNEW,H,F,IDX) uses data
-%   computed in LLDP
+%   YINTERP = NTRP45(TINTERP,T,Y,TNEW,YNEW,H,F,IDX) uses data computed in ODE45
 %   to approximate the solution at time TINTERP.  TINTERP may be a scalar 
 %   or a row vector. 
 %   The arguments TNEW and YNEW do not affect the computations. They are 
 %   required for consistency of syntax with other interpolation functions. 
 %   Any values entered for TNEW and YNEW are ignored.
 %    
-%   [YINTERP,YPINTERP] = ntrpLLRK45_Krilov_fj(TINTERP,T,Y,TNEW,YNEW,H,F,IDX) returns also the
+%   [YINTERP,YPINTERP] = NTRP45(TINTERP,T,Y,TNEW,YNEW,H,F,IDX) returns also the
 %   derivative of the polynomial approximating the solution. 
 %
 %   IDX has indices of solution components that must be non-negative. Negative 
 %   YINTERP(IDX) are replaced with zeros and the derivative YPINTERP(IDX) is 
 %   set to zero.
 %   
+%   See also ODE45, DEVAL.
+
 %   Mark W. Reichelt and Lawrence F. Shampine, 6-13-94
 %   Copyright 1984-2009 The MathWorks, Inc.
-%   Modified version for Local Lonearized Runge-Kutta methods
-%   Copyright (c) 2022, Frank S. Naranjo-Noda
 %   Modified version for Local Lonearized Dormand and Prince Runge-Kutta method
 %   Copyright (c) 2022, Frank S. Naranjo-Noda
 
@@ -35,11 +34,9 @@ BI = [
 neq = length(y);
 u = tinterp - t;
 LL=zeros(neq,length(tinterp));
-normy = norm(y);
 for i=1:length(tinterp) 
    tt=u(i);
-   LL(:,i) = phi1LLDP_single_freeJ(Fx,F,y,normy,t,tt,kdim);
-%    LL(:,i)=phi1LLDP_single(Fx,F,y,normy,t,tt,kdim);
+   LL(:,i)=phi1LLDP_single(Fx,F,tt,kdim);
 end
 s = u/h;   
 yinterp = y(:,ones(size(tinterp))) + LL + f*(h*BI)*cumprod([s;s;s;s]);

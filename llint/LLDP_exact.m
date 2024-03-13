@@ -1,6 +1,6 @@
-function varargout = LLDP2(ode,tspan,y0,options,varargin)
-%   LLDP2 Local Lineraized Dormand and Prince Runge-Kutta
-%   [TOUT,YOUT] = LLDP2(ODEFUN,TSPAN,Y0) with TSPAN = [T0 TFINAL] integrates 
+function varargout = LLDP_exact(ode,odeFx,tspan,y0,options,varargin)
+%   LLDP1 Local Lineraized Dormand and Prince Runge-Kutta
+%   [TOUT,YOUT] = LLDP_exact(ODEFUN,ODEJAC,TSPAN,Y0) with TSPAN = [T0 TFINAL] integrates 
 %   the system of differential equations y' = f(t,y) from time T0 to TFINAL 
 %   with initial conditions Y0. ODEFUN is a function handle. For a scalar T
 %   and a vector Y, ODEFUN(T,Y) must return a column vector corresponding 
@@ -9,7 +9,7 @@ function varargout = LLDP2(ode,tspan,y0,options,varargin)
 %   times T0,T1,...,TFINAL (all increasing or all decreasing), use TSPAN = 
 %   [T0 T1 ... TFINAL].     
 %   
-%   [TOUT,YOUT] = LLDP2(ODEFUN,TSPAN,Y0,OPTIONS) solves as above with default
+%   [TOUT,YOUT] = LLDP_exact(ODEFUN,ODEJAC,TSPAN,Y0,OPTIONS) solves as above with default
 %   integration properties replaced by values in OPTIONS, an argument created
 %   with the llset function. See llset for details. Commonly used options 
 %   are scalar relative error tolerance 'RelTol' (1e-3 by default) and vector
@@ -18,7 +18,7 @@ function varargout = LLDP2(ode,tspan,y0,options,varargin)
 %   ODESET to set the 'NonNegative' property to the indices of these
 %   components.
 %   
-%   LLDP2 can solve problems M(t,y)*y' = f(t,y) with mass matrix M that is
+%   LLDP1 can solve problems M(t,y)*y' = f(t,y) with mass matrix M that is
 %   nonsingular. Use ODESET to set the 'Mass' property to a function handle 
 %   MASS if MASS(T,Y) returns the value of the mass matrix. If the mass matrix 
 %   is constant, the matrix can be used as the value of the 'Mass' option. If
@@ -26,7 +26,7 @@ function varargout = LLDP2(ode,tspan,y0,options,varargin)
 %   MASS is to be called with one input argument T, set 'MStateDependence' to
 %   'none'.
 %
-%   [TOUT,YOUT,TE,YE,IE] = LLDP2(ODEFUN,TSPAN,Y0,OPTIONS) with the 'Events'
+%   [TOUT,YOUT,TE,YE,IE] = LLDP_exact(ODEFUN,ODEJAC,TSPAN,Y0,OPTIONS) with the 'Events'
 %   property in OPTIONS set to a function handle EVENTS, solves as above 
 %   while also finding where functions of (T,Y), called event functions, 
 %   are zero. For each function you specify whether the integration is 
@@ -41,9 +41,9 @@ function varargout = LLDP2(ode,tspan,y0,options,varargin)
 %   at which events occur. Rows of YE are the corresponding solutions, and 
 %   indices in vector IE specify which event occurred.    
 %
-%   SOL = LLDP2(ODEFUN,[T0 TFINAL],Y0...) returns a structure that can be
+%   SOL = LLDP_exact(ODEFUN,ODEJAC,[T0 TFINAL],Y0...) returns a structure that can be
 %   used with DEVAL to evaluate the solution or its first derivative at 
-%   any point between T0 and TFINAL. The steps chosen by LLDP2 are returned 
+%   any point between T0 and TFINAL. The steps chosen by LLDP1 are returned 
 %   in a row vector SOL.x.  For each I, the column SOL.y(:,I) contains 
 %   the solution at SOL.x(I). If events were detected, SOL.xe is a row vector 
 %   of points at which events occurred. Columns of SOL.ye are the corresponding 
@@ -55,17 +55,17 @@ function varargout = LLDP2(ode,tspan,y0,options,varargin)
 %   Copyright 1984-2017 The MathWorks, Inc.
 %   Modified version for Local Lonearized Dormand and Prince Runge-Kutta method
 %   Copyright (c) 2022, Frank S. Naranjo-Noda
-solver_name = 'LLDP2';
+solver_name = 'LLDP_exact';
 
 % Check inputs
-if nargin < 4
+if nargin < 5
   options = [];
-  if nargin < 3
+  if nargin < 4
     y0 = [];
-    if nargin < 2
+    if nargin < 3
       tspan = [];
-      if nargin < 1
-        error(message('llint:LLDP_Kphi1:NotEnoughInputs'));
+      if nargin < 2
+        error(message('llint:LLDP_exact:NotEnoughInputs'));
       end
     end
   end
@@ -75,10 +75,11 @@ end
 nsteps  = 0;
 nfailed = 0;
 nfevals = 0;
-% nJevals = 0;
+nJevals = 0;
 
 % Output
 FcnHandlesUsed  = isa(ode,'function_handle');
+FcnHandlesUsed2  = isa(odeFx,'function_handle');
 output_sol = (FcnHandlesUsed && (nargout==1));      % sol = odeXX(...)
 output_ty  = (~output_sol && (nargout > 0));  % [t,y,...] = odeXX(...)
 % There might be no output requested...
@@ -87,18 +88,20 @@ sol = []; f3d = [];
 if output_sol
   sol.solver = solver_name;
   sol.extdata.odefun = ode;
+  sol.extdata.odefx = odeFx;
   sol.extdata.options = options;
   sol.extdata.varargin = varargin;
 end
 
 % Handle solver arguments
-[neq, tspan, ntspan, next, t0, tfinal, tdir, y0, f0, odeArgs, odeFcn, ...
+[neq, tspan, ntspan, next, t0, tfinal, tdir, y0, f0, Fx, odeArgs, odeFcn, odeFxcn, ...
   options, threshold, rtol, normcontrol, normy, hmax, htry, htspan, dataType] = ...
-  llargumentsfj(FcnHandlesUsed, solver_name, ode, tspan, ...
+  llarguments(FcnHandlesUsed, FcnHandlesUsed2, solver_name, ode, odeFx, tspan, ...
                 y0, options, varargin);
-[kdmax,kdmin,~,~,~,jorder]=LLDPparams(options,neq);
-gamma=0.001;
+[kdmax,kdmin,dextinf,~]=LLDPparams(options,neq);
+gamma = 0.001;
 nfevals = nfevals + 1;
+nJevals = nJevals + 1;
 
 % Handle the output
 if nargout > 0
@@ -257,36 +260,30 @@ end
 % Cleanup the main ode function call
 FcnUsed = isa(odeFcn,'function_handle');
 odeFcn_main = odefcncleanup(FcnUsed,odeFcn,odeArgs);
+FcnUsed = isa(odeFxcn,'function_handle');
+odeFxcn_main = odefcncleanup(FcnUsed,odeFxcn,odeArgs);
 
 % THE MAIN LOOP
 
 done = false;
 atol=options.AbsTol;
-Fxphi = zeros(neq, 5);
-
 %krilov consants and parameters
 kmin = kdmax;
 kmax = kdmin;
-pmin = 6;
-pmax = 3;
 
-%stats
+%debug
 ksum = 0;
 nexpo=0;
 breakcont=0;
 reusedsubspace=0;
-korder_krylov = 100;
-korder_rk = 100;
-alpha2 = 100;
-korder_krylov_max = 0;
-korder_rk_max = 0;
-alpha2_max = 0;
-eta_v_2_cont = 0; 
-
+if dextinf~=0
+    kdimarr = [];
+end
 
 %adaptive for krilov
 kdim=kdmin;
 fac=1/log(2);
+
 %adaptive Jacobian
 
 while ~done
@@ -303,84 +300,64 @@ while ~done
     absh = abs(h);
     done = true;
   end
-  ny = norm(y);
+  nnorm=norm(Fx,'inf');
 
   % LOOP FOR ADVANCING ONE STEP.
   nofailed = true;                      % no failed attempts
   while true
-     
-     
+
+     nhC = h*nnorm;
+     if h+nhC>54000
+         absh=54000/(1+nnorm);
+         absh = min(hmax, max(hmin, absh));    % couldn't limit absh until new hmin
+         h = tdir * absh;
+         nhC=nnorm*absh;
+         if done==true
+             done=false;
+         end
+     end
 
      % matrix exponential calculation
      if nofailed
-         [phi,kerror,kdim,nexpcont,breakdown,knfeval,padepq,korder] = phi1LLDP2(odeFcn_main,f1,h,hmin,t,y,ny,kdim,...
+         [phi,kerror,kdim,nexpcont,breakdown, ~] = phi1LLDP_hJ_f_gamma(Fx,f1,h,hmin,y,nhC,kdim,...
                 rtol,atol,kdmax,kdmin,gamma);
-         nfevals=nfevals+knfeval;
      else
-         [phi,kerror,kdim,nexpcont,breakdown,knfeval,padepq,korder] = phi1LLDP2(odeFcn_main,f1,h,hmin,t,y,ny,kdim,...
+        [phi,kerror,kdim,nexpcont,breakdown, ~] = phi1LLDP_hJ_f_gamma(Fx,f1,h,hmin,y,nhC,kdim,...
                 rtol,atol,kdmax,kdmin,gamma, 1);
-         nfevals=nfevals+knfeval;
         reusedsubspace = reusedsubspace+1;
      end
-
      % update information
      ksum = ksum + kdim;
      breakcont=breakcont+breakdown;
      nexpo = nexpo + nexpcont;
-    
+     if kdim<kmin
+         kmin = kdim;
+     end
+     if kdim>kmax
+         kmax = kdim;
+     end
+     if dextinf==2
+         fprintf('nstep: %d\trel_err: %2.4e\tlogerr: %.4f\tkdim: %d\nnhFx: %2.4e\th: %2.4e\tt: %f\n',nsteps,kerror,log(kerror/gamma),kdim,nhC,h,t);
+     end
 
-    ny2 = sqrt((1+ny)*eps);
-    nyp1 =  ny2/(norm(phi(:,1))+eps);
-    nyp2 =  ny2/(norm(phi(:,2))+eps);
-    nyp3 =  ny2/(norm(phi(:,3))+eps);
-    nyp4 =  ny2/(norm(phi(:,4))+eps);
-    nyp5 =  ny2/(norm(phi(:,5))+eps);
-
-        
-    logh=log(h);
-    alpha_2 = min([log(nyp1),log(nyp2),log(nyp3),log(nyp4),log(nyp5)])/logh;
-    eta2 = 1;
-
-    if alpha_2 <3 && (alpha_2+2)<korder
-    
-        Fxphi(:,1) = FreeJ_f_w(2,odeFcn_main,y,phi(:,1),t,nyp1);
-        Fxphi(:,2) = FreeJ_f_w(2,odeFcn_main,y,phi(:,2),t,nyp2);
-        Fxphi(:,3) = FreeJ_f_w(2,odeFcn_main,y,phi(:,3),t,nyp3);
-        Fxphi(:,4) = FreeJ_f_w(2,odeFcn_main,y,phi(:,4),t,nyp4);
-        Fxphi(:,5) = FreeJ_f_w(2,odeFcn_main,y,phi(:,5),t,nyp5);
-        nfevals = nfevals + 10;
-        eta2 = 2;
-
-    else
-        Fxphi(:,1) = (1/nyp1).*(odeFcn_main(t, y+nyp1.*phi(:,1))-f1);
-        Fxphi(:,2) = (1/nyp2).*(odeFcn_main(t, y+nyp2.*phi(:,2))-f1);
-        Fxphi(:,3) = (1/nyp3).*(odeFcn_main(t, y+nyp3.*phi(:,3))-f1);
-        Fxphi(:,4) = (1/nyp4).*(odeFcn_main(t, y+nyp4.*phi(:,4))-f1);
-        Fxphi(:,5) = (1/nyp5).*(odeFcn_main(t, y+nyp5.*phi(:,5))-f1);
-        nfevals = nfevals + 5;
-        eta_v_2_cont = eta_v_2_cont + 1;
-        
-    end
-    
-
-    yLL2 = y + phi(:,5);
-    common = f1 + Fxphi(:,5);
+     yLL2 = y + phi(:,5);
+     common = f1 + Fx*phi(:,5);
 
     y2 = y + phi(:,1);
     t2 = t + h*a2;
-    f2 = odeFcn_main(t2, y2)- f1 - Fxphi(:,1);
+    f2 = odeFcn_main(t2, y2)- f1 - Fx*phi(:,1);
 
     y3 = y + (h*b22).*f2 + phi(:,2);
     t3 = t + h*a3;
-    f3 = odeFcn_main(t3, y3)- f1 - Fxphi(:,2);
+    f3 = odeFcn_main(t3, y3)- f1 - Fx*phi(:,2);
 
-    y4 = y + (h*b32).*f2 + (h*b33).*f3 + phi(:,3);
+    y4 = y + (h*b32).*f2 + (h*b33).*f3  +phi(:,3);
     t4 = t + h*a4;
-    f4 = odeFcn_main(t4, y4)- f1 - Fxphi(:,3);
+    f4 = odeFcn_main(t4, y4)- f1 - Fx*phi(:,3);
 
     y5 = y + (h*b42).*f2 + (h*b43).*f3 + (h*b44).*f4 + phi(:,4);
     t5 = t + h*a5;
-    f5 = odeFcn_main(t5, y5)- f1 - Fxphi(:,4);
+    f5 = odeFcn_main(t5, y5)- f1 - Fx*phi(:,4);
 
     y6 = yLL2 + (h*b52).*f2 + (h*b53).*f3 + (h*b54).*f4 + (h*b55).*f5;
     t6 = t + h;
@@ -398,13 +375,6 @@ while ~done
     f7 = F_ynew - common;
 
     nfevals = nfevals + 6;
-    
-    
-    rk = (1+alpha_2)*eta2+1;
-%     korderp =  max([1,min([rk,korder,4])])+1;
-%     pow = 1/korderp;
-    
-%  disp([rk,korder,korderp])
 
     % Estimate the error.
     NNrejectStep = false;
@@ -437,7 +407,7 @@ while ~done
     if err > rtol                       % Failed step
       nfailed = nfailed + 1;
       if absh <= hmin
-        warning(message('llint:LLDP_Kphi1:IntegrationTolNotMet', sprintf( '%e', t ), sprintf( '%e', hmin )));
+        warning(message('llint:LLDP_exact:IntegrationTolNotMet', sprintf( '%e', t ), sprintf( '%e', hmin )));
         solver_output = llfinalize(solver_name, sol,...
                                     outputFcn, outputArgs,...
                                     printstats, [nsteps, nfailed, nfevals],...
@@ -463,12 +433,6 @@ while ~done
       h = tdir * absh;
       done = false;
 
-      rfacmax=max(1,kdim/3);
-      rfacmin=1;
-      kdnew = ceil(kdim + max(rfacmax,min(log(kerror/gamma)*fac,rfacmin)));
-      kdim=max(kdmin,min(kdmax,kdnew));
-
-
     else                                % Successful step
 
       NNreset_f7 = false;
@@ -479,38 +443,24 @@ while ~done
         end
         NNreset_f7 = true;
       end
-      
-      kmin = min(kdim,kmin);
-      kmax = max(kmax,kdim);
-      pmin = min(padepq,pmin);
-      pmax = max(padepq,pmax);
 
-      afacmin=kdim/3;
       afacmax=-kdim/4;
-      kdnew = floor(kdim + max(afacmax,min(log(kerror/gamma)*fac,afacmin)));
-      kdim=max(kdmin,min(kdmax,kdnew));
-      
-      
-      korder_krylov = min(korder_krylov, korder);
-      korder_krylov_max = max(korder_krylov_max, korder);
-      
-      korder_rk = min(rk,korder_rk);
-      korder_rk_max = max(rk,korder_rk_max);
-      
-      alpha2 = min(alpha_2,alpha2);
-      alpha2_max = max(alpha_2,alpha2_max);
-      
+      afacmin=kdim/3;
+      kdnew =  log(kerror/gamma)*fac;
+      kdnew = floor(kdim + max(afacmax,min(kdnew,afacmin)));
+      kdnew=max(kdmin,min(kdmax,kdnew));
+      kdim=kdnew;
+
       break;
 
     end
-    
   end
   nsteps = nsteps + 1;
 
   if haveEventFcn
     f = [zeros(length(f2),1) f2 f3 f4 f5 f6 f7];
     [te,ye,ie,valt,stop] = ...
-        odezero(@ntrpLLRK45_Krilov_fj,eventFcn,eventArgs,valt,t,y,t0,h,f,idxNonNegative,odeFcn_main,f1,kdmax);
+        odezero(@ntrpLLRK45_Krilov,eventFcn,eventArgs,valt,t,y,t0,h,f,idxNonNegative,Fx,f1,kdmax);
     if ~isempty(te)
       if output_sol || (nargout > 2)
         teout = [teout, te];
@@ -522,7 +472,7 @@ while ~done
 
         % Update the derivatives using the interpolating polynomial.
         taux = t + (te(end) - t)*A;
-        [~,f(:,2:7)] = ntrpLLRK45_Krilov_fj(taux,t,y,h,f,idxNonNegative,odeFcn_main,f1,kdmax);
+        [~,f(:,2:7)] = ntrpLLRK45_Krilov(taux,t,y,h,f,idxNonNegative,Fx,f1,kdmax);
         f2 = f(:,2); f3 = f(:,3); f4 = f(:,4); f5 = f(:,5); f6 = f(:,6); f7 = f(:,7);
 
         tnew = te(end);
@@ -538,11 +488,11 @@ while ~done
     if nout > length(tout)
       tout = [tout, zeros(1,chunk,dataType)];  % requires chunk >= refine
       yout = [yout, zeros(neq,chunk,dataType)];
-%       f3d  = cat(3,f3d,zeros(neq,7,chunk,dataType));
+      f3d  = cat(3,f3d,zeros(neq,7,chunk,dataType));
     end
     tout(nout) = tnew;
     yout(:,nout) = ynew;
-%     f3d(:,:,nout) = [zeros(length(f2),1) f2 f3 f4 f5 f6 f7];
+    f3d(:,:,nout) = [zeros(length(f2),1) f2 f3 f4 f5 f6 f7];
   end
 
   if output_ty || haveOutputFcn
@@ -555,7 +505,7 @@ while ~done
       tref = t + (tnew-t)*S;
       nout_new = refine;
       tout_new = [tref, tnew];
-      yntrp45 = ntrpLLRK45_Krilov_fj(tref,t,y,h,[zeros(length(f2),1) f2 f3 f4 f5 f6 f7],idxNonNegative,odeFcn_main,f1,kdmax);
+      yntrp45 = ntrpLLRK45_Krilov(tref,t,y,h,[zeros(length(f2),1) f2 f3 f4 f5 f6 f7],idxNonNegative,Fx,f1,kdmax);
       yout_new = [yntrp45, ynew];
      case 1      % output only at tspan points
       nout_new =  0;
@@ -575,7 +525,7 @@ while ~done
         if tspan(next) == tnew
           yout_new = [yout_new, ynew];
         else
-          yntrp45 = ntrpLLRK45_Krilov_fj(tspan(next),t,y,h,[zeros(length(f2),1) f2 f3 f4 f5 f6 f7],idxNonNegative,odeFcn_main,f1,kdmax);
+          yntrp45 = ntrpLLRK45_Krilov(tspan(next),t,y,h,[zeros(length(f2),1) f2 f3 f4 f5 f6 f7],idxNonNegative,Fx,f1,kdmax);
           yout_new = [yout_new, yntrp45];
         end
         next = next + 1;
@@ -627,12 +577,12 @@ while ~done
   if NNreset_f7
     % Used f7 for unperturbed solution to interpolate.
     % Now reset f7 to move along constraint.
-%     f7 = odeFcn_main(tnew,ynew);
-    F_ynew= deFcn_main(tnew,ynew) - common;
+    f7 = odeFcn_main(tnew,ynew);
     nfevals = nfevals + 1;
   end
   f1 = F_ynew;  % Already have f(tnew,ynew)
-%   nJevals = nJevals + 1;
+  Fx = odeFxcn_main(t,y);
+  nJevals = nJevals + 1;
 end
 
 solver_output = llfinalize(solver_name, sol,...
@@ -642,31 +592,17 @@ solver_output = llfinalize(solver_name, sol,...
                             haveEventFcn, teout, yeout, ieout,...
                             {f3d,idxNonNegative});
 if nargout == 1
-    solver_output{1}.stats.nJevals=0;
+    solver_output{1}.stats.nJevals=nJevals;
     solver_output{1}.stats.nexpm=nexpo;
     solver_output{1}.stats.Kdim_sum = ksum;
     solver_output{1}.stats.Kdim_min = kmin;
     solver_output{1}.stats.Kdim_max = kmax;
-    solver_output{1}.stats.pade_min = pmin;
-    solver_output{1}.stats.pade_max = pmax;
     solver_output{1}.stats.breakdown = breakcont;
     solver_output{1}.stats.reusedsubspace = reusedsubspace;
-    solver_output{1}.stats.korder =  min([korder_rk,korder_krylov,5]);
-    solver_output{1}.stats.korder_krylov = korder_krylov;
-    solver_output{1}.stats.eta = 1;
-    solver_output{1}.stats.alpha = korder_krylov-1;
-    solver_output{1}.stats.korder_rk = korder_rk;
-    solver_output{1}.stats.alpha2 = alpha2;
-    solver_output{1}.stats.korder_krylov_max = korder_krylov_max;
-    solver_output{1}.stats.eta_max = 1;
-    solver_output{1}.stats.alpha_max = korder_krylov_max-1;
-    solver_output{1}.stats.korder_rk_max = korder_rk_max;
-    solver_output{1}.stats.alpha2_max = alpha2_max;
-    solver_output{1}.stats.eta_v_2_cont = eta_v_2_cont;
-%     if dextinf~=0
-%     extinf = struct('kdim',kdimarr);
-%         solver_output{1}.extinf = extinf;
-%     end
+    if dextinf~=0
+    extinf = struct('kdim',kdimarr);
+        solver_output{1}.extinf = extinf;
+    end
 end
 %debug
 

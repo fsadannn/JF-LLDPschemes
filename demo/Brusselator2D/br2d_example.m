@@ -11,6 +11,7 @@ clear X;
 clear Y;
 clear BRUSS_I1;
 clear BRUSS_I2;
+IT=[0 0.1];
 
 options15sExact=odeset('RelTol',1.0e-12,'AbsTol',1.0e-14,'Jacobian',Jname);
 
@@ -139,7 +140,7 @@ ASteps(6)=SolLL.stats.nsteps;
 RSteps(6)=SolLL.stats.nfailed;
 fEval(6)=SolLL.stats.nfevals;
 KSubspace(6)=SolLL.stats.nsteps;
-ME(5)=SolLL.stats.nexpm;
+ME(6)=SolLL.stats.nexpm;
 mtotal(6)=SolLL.stats.Kdim_sum;
 mmin(6)=SolLL.stats.Kdim_min;
 mmax(6)=SolLL.stats.Kdim_max;

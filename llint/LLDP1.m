@@ -56,7 +56,7 @@ function varargout = LLDP1(ode,tspan,y0,options,varargin)
 %   Modified version for Local Lonearized Dormand and Prince Runge-Kutta method
 %   Copyright (c) 2022, Frank S. Naranjo-Noda
 
-solver_name = 'LLDP_Kphi1';
+solver_name = 'LLDP1';
 
 % Check inputs
 if nargin < 4
