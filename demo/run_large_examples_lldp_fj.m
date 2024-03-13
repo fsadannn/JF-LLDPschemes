@@ -1,4 +1,4 @@
-% This script generates the Tables 3-5 of [1] illustrating the performance 
+% This script generates the Tables for illustrating the performance 
 % of the codes LLDP1 and LLDP2 for different tolerances. 
 %
 % [1] Jacobian-free Locally Linearized Runge-Kutta method of 

@@ -150,7 +150,7 @@ pmin(6)=SolLL.stats.pade_min;
 pmax(6)=SolLL.stats.pade_max;
 
 % Table
-disp("Brusselator2D: M=225, d=101250");
+disp("GrayScott2D: M=225, d=101250");
 disp(table(Tol,Name,RError,ASteps,RSteps,fEval,KSubspace,ME,mtotal,mmin,mmax,pmin,pmax));
 clear SolLL;
 clear phi1LLDP1;
