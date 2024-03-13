@@ -60,7 +60,15 @@ if (nout > 0) % produce output
       [f3d,idxNonNegative] = deal(interp_data{:});
 %       sol.idata.f3d = f3d(:,:,1:nout);      
       sol.idata.idxNonNegative = idxNonNegative;
-    case 'LLDP_Pphi1'
+     case 'LLDP1'
+      [f3d,idxNonNegative] = deal(interp_data{:});
+%       sol.idata.f3d = f3d(:,:,1:nout);      
+      sol.idata.idxNonNegative = idxNonNegative;
+      case 'LLDP2'
+      [f3d,idxNonNegative] = deal(interp_data{:});
+%       sol.idata.f3d = f3d(:,:,1:nout);      
+      sol.idata.idxNonNegative = idxNonNegative;
+    case 'LLDP_exact'
       [f3d,idxNonNegative] = deal(interp_data{:});
 %       sol.idata.f3d = f3d(:,:,1:nout);      
       sol.idata.idxNonNegative = idxNonNegative;
