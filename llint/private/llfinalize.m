@@ -56,7 +56,7 @@ if (nout > 0) % produce output
     end
     sol.stats = stats;
     switch solver
-     case 'LLDP_Kphi1'
+     case 'LLDP45'
       [f3d,idxNonNegative] = deal(interp_data{:});
 %       sol.idata.f3d = f3d(:,:,1:nout);      
       sol.idata.idxNonNegative = idxNonNegative;

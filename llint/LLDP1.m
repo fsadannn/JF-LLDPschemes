@@ -1,5 +1,8 @@
 function varargout = LLDP1(ode,tspan,y0,options,varargin)
-%   LLDP1 Local Lineraized Dormand and Prince Runge-Kutta
+%   LLDP1 variable step-size Jacobian-free Locally Linearized Runge-Kutta 
+%    method of Dormand and Prince with variable order finite 
+%    difference in the Arnoldi algorithm
+%
 %   [TOUT,YOUT] = LLDP1(ODEFUN,TSPAN,Y0) with TSPAN = [T0 TFINAL] integrates 
 %   the system of differential equations y' = f(t,y) from time T0 to TFINAL 
 %   with initial conditions Y0. ODEFUN is a function handle. For a scalar T
@@ -53,7 +56,9 @@ function varargout = LLDP1(ode,tspan,y0,options,varargin)
 
 %   Mark W. Reichelt and Lawrence F. Shampine, 6-14-94
 %   Copyright 1984-2017 The MathWorks, Inc.
-%   Modified version for Local Lonearized Dormand and Prince Runge-Kutta method
+%   Modified version of ode45 according  to
+%   Jacobian-free Locally Linearized Runge-Kutta method of Dormand and Prince
+%   for large systems of differential equations by F.S. Naranjo-Noda and J.C. Jimenez
 %   Copyright (c) 2022, Frank S. Naranjo-Noda
 
 solver_name = 'LLDP1';
