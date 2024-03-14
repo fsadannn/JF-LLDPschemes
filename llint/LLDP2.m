@@ -1,6 +1,6 @@
 function varargout = LLDP2(ode,tspan,y0,options,varargin)
-%   LLDP2 variable step-size Jacobian-free Locally Linearized Runge-Kutta 
-%    method of Dormand and Prince fixed order 1 finite difference in the Arnoldi algorithm
+%   LLDP2 Jacobian-free Locally Linearized Runge-Kutta 
+%    method of Dormand and Prince with fixed order 1 finite difference in the Arnoldi algorithm
 %
 %   [TOUT,YOUT] = LLDP2(ODEFUN,TSPAN,Y0) with TSPAN = [T0 TFINAL] integrates 
 %   the system of differential equations y' = f(t,y) from time T0 to TFINAL 

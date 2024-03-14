@@ -1,5 +1,5 @@
 function varargout = LLDP1(ode,tspan,y0,options,varargin)
-%   LLDP1 variable step-size Jacobian-free Locally Linearized Runge-Kutta 
+%   LLDP1 Jacobian-free Locally Linearized Runge-Kutta 
 %    method of Dormand and Prince with variable order finite 
 %    difference in the Arnoldi algorithm
 %
