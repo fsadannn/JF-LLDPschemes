@@ -1,4 +1,4 @@
-function varargout = LLDP2(ode,tspan,y0,options,varargin)
+function varargout = LLDP(ode,tspan,y0,options,varargin)
 %   LLDP2 Jacobian-free Locally Linearized Runge-Kutta 
 %    method of Dormand and Prince with fixed order 1 finite difference in the Arnoldi algorithm
 %
@@ -59,7 +59,7 @@ function varargout = LLDP2(ode,tspan,y0,options,varargin)
 %   Jacobian-free Locally Linearized Runge-Kutta method of Dormand and Prince
 %   for large systems of differential equations by F.S. Naranjo-Noda and J.C. Jimenez
 %   Copyright (c) 2022, Frank S. Naranjo-Noda
-solver_name = 'LLDP2';
+solver_name = 'LLDP';
 
 % Check inputs
 if nargin < 4
@@ -69,7 +69,7 @@ if nargin < 4
     if nargin < 2
       tspan = [];
       if nargin < 1
-        error(message('llint:LLDP_Kphi1:NotEnoughInputs'));
+        error(message('llint:LLDP:NotEnoughInputs'));
       end
     end
   end
@@ -79,7 +79,6 @@ end
 nsteps  = 0;
 nfailed = 0;
 nfevals = 0;
-% nJevals = 0;
 
 % Output
 FcnHandlesUsed  = isa(ode,'function_handle');
@@ -100,8 +99,9 @@ end
   options, threshold, rtol, normcontrol, normy, hmax, htry, htspan, dataType] = ...
   llargumentsfj(FcnHandlesUsed, solver_name, ode, tspan, ...
                 y0, options, varargin);
-[kdmax,kdmin,~,~,~,~]=LLDPparams(options,neq);
+[kdmax,~,~,~,~,~]=LLDPparams(options,neq);
 gamma=0.001;
+kdmin=5;
 nfevals = nfevals + 1;
 
 % Handle the output
@@ -266,7 +266,6 @@ odeFcn_main = odefcncleanup(FcnUsed,odeFcn,odeArgs);
 
 done = false;
 atol=options.AbsTol;
-Fxphi = zeros(neq, 5);
 
 %krilov consants and parameters
 kmin = kdmax;
@@ -280,11 +279,8 @@ nexpo=0;
 breakcont=0;
 reusedsubspace=0;
 korder_krylov = 100;
-korder_rk = 100;
-alpha2 = 100;
 korder_krylov_max = 0;
-korder_rk_max = 0;
-alpha2_max = 0;
+korder_rk = 5;
 eta_v_2_cont = 0; 
 
 
@@ -317,11 +313,11 @@ while ~done
 
      % matrix exponential calculation
      if nofailed
-         [phi,kerror,kdim,nexpcont,breakdown,knfeval,padepq,korder] = phi1LLDP2(odeFcn_main,f1,h,hmin,t,y,ny,kdim,...
+         [phi,Fxphi,kerror,kdim,nexpcont,breakdown,knfeval,padepq,korder] = phi1LLDP(odeFcn_main,f1,h,hmin,t,y,ny,kdim,...
                 rtol,atol,kdmax,kdmin,gamma);
          nfevals=nfevals+knfeval;
      else
-         [phi,kerror,kdim,nexpcont,breakdown,knfeval,padepq,korder] = phi1LLDP2(odeFcn_main,f1,h,hmin,t,y,ny,kdim,...
+         [phi,Fxphi,kerror,kdim,nexpcont,breakdown,knfeval,padepq,korder] = phi1LLDP(odeFcn_main,f1,h,hmin,t,y,ny,kdim,...
                 rtol,atol,kdmax,kdmin,gamma, 1);
          nfevals=nfevals+knfeval;
         reusedsubspace = reusedsubspace+1;
@@ -331,60 +327,28 @@ while ~done
      ksum = ksum + kdim;
      breakcont=breakcont+breakdown;
      nexpo = nexpo + nexpcont;
-    
+     
 
-    ny2 = sqrt((1+ny)*eps);
-    nyp1 =  ny2/(norm(phi(:,1))+eps);
-    nyp2 =  ny2/(norm(phi(:,2))+eps);
-    nyp3 =  ny2/(norm(phi(:,3))+eps);
-    nyp4 =  ny2/(norm(phi(:,4))+eps);
-    nyp5 =  ny2/(norm(phi(:,5))+eps);
+    Fxphi = Fxphi + f1;
 
-        
-    logh=log(h);
-    alpha_2 = min([log(nyp1),log(nyp2),log(nyp3),log(nyp4),log(nyp5)])/logh;
-    eta2 = 1;
-
-    if alpha_2 <3 && (alpha_2+2)<korder
-    
-        Fxphi(:,1) = FreeJ_f_w(2,odeFcn_main,y,phi(:,1),t,nyp1);
-        Fxphi(:,2) = FreeJ_f_w(2,odeFcn_main,y,phi(:,2),t,nyp2);
-        Fxphi(:,3) = FreeJ_f_w(2,odeFcn_main,y,phi(:,3),t,nyp3);
-        Fxphi(:,4) = FreeJ_f_w(2,odeFcn_main,y,phi(:,4),t,nyp4);
-        Fxphi(:,5) = FreeJ_f_w(2,odeFcn_main,y,phi(:,5),t,nyp5);
-        nfevals = nfevals + 10;
-        eta2 = 2;
-
-    else
-        Fxphi(:,1) = (1/nyp1).*(odeFcn_main(t, y+nyp1.*phi(:,1))-f1);
-        Fxphi(:,2) = (1/nyp2).*(odeFcn_main(t, y+nyp2.*phi(:,2))-f1);
-        Fxphi(:,3) = (1/nyp3).*(odeFcn_main(t, y+nyp3.*phi(:,3))-f1);
-        Fxphi(:,4) = (1/nyp4).*(odeFcn_main(t, y+nyp4.*phi(:,4))-f1);
-        Fxphi(:,5) = (1/nyp5).*(odeFcn_main(t, y+nyp5.*phi(:,5))-f1);
-        nfevals = nfevals + 5;
-        eta_v_2_cont = eta_v_2_cont + 1;
-        
-    end
-    
-
-    yLL2 = y + phi(:,5);
-    common = f1 + Fxphi(:,5);
+     yLL2 = y + phi(:,5);
+     common = Fxphi(:,5);
 
     y2 = y + phi(:,1);
     t2 = t + h*a2;
-    f2 = odeFcn_main(t2, y2)- f1 - Fxphi(:,1);
+    f2 = odeFcn_main(t2, y2)- Fxphi(:,1);
 
     y3 = y + (h*b22).*f2 + phi(:,2);
     t3 = t + h*a3;
-    f3 = odeFcn_main(t3, y3)- f1 - Fxphi(:,2);
+    f3 = odeFcn_main(t3, y3)- Fxphi(:,2);
 
     y4 = y + (h*b32).*f2 + (h*b33).*f3 + phi(:,3);
     t4 = t + h*a4;
-    f4 = odeFcn_main(t4, y4)- f1 - Fxphi(:,3);
+    f4 = odeFcn_main(t4, y4)- Fxphi(:,3);
 
     y5 = y + (h*b42).*f2 + (h*b43).*f3 + (h*b44).*f4 + phi(:,4);
     t5 = t + h*a5;
-    f5 = odeFcn_main(t5, y5)- f1 - Fxphi(:,4);
+    f5 = odeFcn_main(t5, y5)- Fxphi(:,4);
 
     y6 = yLL2 + (h*b52).*f2 + (h*b53).*f3 + (h*b54).*f4 + (h*b55).*f5;
     t6 = t + h;
@@ -402,13 +366,6 @@ while ~done
     f7 = F_ynew - common;
 
     nfevals = nfevals + 6;
-    
-    
-    rk = (1+alpha_2)*eta2+1;
-%     korderp =  max([1,min([rk,korder,4])])+1;
-%     pow = 1/korderp;
-    
-%  disp([rk,korder,korderp])
 
     % Estimate the error.
     NNrejectStep = false;
@@ -497,12 +454,6 @@ while ~done
       
       korder_krylov = min(korder_krylov, korder);
       korder_krylov_max = max(korder_krylov_max, korder);
-      
-      korder_rk = min(rk,korder_rk);
-      korder_rk_max = max(rk,korder_rk_max);
-      
-      alpha2 = min(alpha_2,alpha2);
-      alpha2_max = max(alpha_2,alpha2_max);
       
       break;
 
@@ -655,17 +606,17 @@ if nargout == 1
     solver_output{1}.stats.pade_max = pmax;
     solver_output{1}.stats.breakdown = breakcont;
     solver_output{1}.stats.reusedsubspace = reusedsubspace;
-    solver_output{1}.stats.korder =  min([korder_rk,korder_krylov,5]);
-    solver_output{1}.stats.korder_krylov = korder_krylov;
+    solver_output{1}.stats.korder =  min([korder_rk,abs(korder_krylov),5]);
+    solver_output{1}.stats.korder_krylov = abs(korder_krylov);
     solver_output{1}.stats.eta = 1;
     solver_output{1}.stats.alpha = korder_krylov-1;
-    solver_output{1}.stats.korder_rk = korder_rk;
-    solver_output{1}.stats.alpha2 = alpha2;
+    solver_output{1}.stats.korder_rk = 5;
+    solver_output{1}.stats.alpha2 = 0;
     solver_output{1}.stats.korder_krylov_max = korder_krylov_max;
     solver_output{1}.stats.eta_max = 1;
-    solver_output{1}.stats.alpha_max = korder_krylov_max-1;
-    solver_output{1}.stats.korder_rk_max = korder_rk_max;
-    solver_output{1}.stats.alpha2_max = alpha2_max;
+    solver_output{1}.stats.alpha_max = 0;
+    solver_output{1}.stats.korder_rk_max = 5;
+    solver_output{1}.stats.alpha2_max = 0;
     solver_output{1}.stats.eta_v_2_cont = eta_v_2_cont;
 %     if dextinf~=0
 %     extinf = struct('kdim',kdimarr);
