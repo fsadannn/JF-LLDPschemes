@@ -83,7 +83,7 @@ function varargout = LLDP45(ode,odeFx,tspan,y0,options,varargin)
 
   % Output
   FcnHandlesUsed  = isa(ode,'function_handle');
-  FcnHandlesUsed2  = isa(odeFx,'function_handle');
+  FcnHandlesUsedFx  = isa(odeFx,'function_handle');
   output_sol = (FcnHandlesUsed && (nargout==1));      % sol = odeXX(...)
   output_ty  = (~output_sol && (nargout > 0));  % [t,y,...] = odeXX(...)
   % There might be no output requested...
@@ -100,8 +100,9 @@ function varargout = LLDP45(ode,odeFx,tspan,y0,options,varargin)
   % Handle solver arguments
   [neq, tspan, ntspan, next, t0, tfinal, tdir, y0, f0, Fx, odeArgs, odeFcn, odeFxcn, ...
     options, threshold, rtol, normcontrol, normy, hmax, htry, htspan, dataType] = ...
-    llarguments(FcnHandlesUsed, FcnHandlesUsed2, solver_name, ode, odeFx, tspan, ...
+    llarguments(FcnHandlesUsed, FcnHandlesUsedFx, solver_name, ode, odeFx, tspan, ...
                   y0, options, varargin);
+  odeFxArgs =  odeArgs;
   % [kdmax,kdmin,~,gamma,jacgap]=LLDPparams(options,neq);
   [kdmax,kdmin,~,gamma,jacgap]=LLDPparams(options,neq);
   % gamma = 0.005;
@@ -152,7 +153,7 @@ function varargout = LLDP45(ode,odeFx,tspan,y0,options,varargin)
       error(message('llint:LLDP_Kphi1:MassSingularYes'));
     end
     % Incorporate the mass matrix into odeFcn and odeArgs.
-    [odeFcn,odeArgs] = llmassexplicit(FcnHandlesUsed,Mtype,odeFcn,odeArgs,Mfun,M);
+    [odeFcn,odeArgs,odeFxcn,odeFxArgs] = llmassexplicit(FcnHandlesUsed,FcnHandlesUsedFx,Mtype,odeFcn,odeFxcn,odeArgs,Mfun,M);
     f0 = feval(odeFcn,t0,y0,odeArgs{:});
     nfevals = nfevals + 1;
   end
@@ -268,7 +269,7 @@ function varargout = LLDP45(ode,odeFx,tspan,y0,options,varargin)
   FcnUsed = isa(odeFcn,'function_handle');
   odeFcn_main = odefcncleanup(FcnUsed,odeFcn,odeArgs);
   FcnUsed = isa(odeFxcn,'function_handle');
-  odeFxcn_main = odefcncleanup(FcnUsed,odeFxcn,odeArgs);
+  odeFxcn_main = odefcncleanup(FcnUsed,odeFxcn,odeFxArgs);
 
   % THE MAIN LOOP
 
