@@ -311,11 +311,11 @@ while ~done
 
      % matrix exponential calculation
      if nofailed
-         [phi,Fxphi,kerror,kdim,nexpcont,breakdown,knfeval,padepq,korder] = phi1LLDP(odeFcn_main,f1,h,hmin,t,y,ny,kdim,...
+         [phi,Fxphi,kerror,kdim,nexpcont,breakdown,knfeval,padepq,korder,h] = phi1LLDP(odeFcn_main,f1,h,hmin,t,y,ny,kdim,...
                 rtol,atol,kdmax,kdmin,gamma);
          nfevals=nfevals+knfeval;
      else
-         [phi,Fxphi,kerror,kdim,nexpcont,breakdown,knfeval,padepq,korder] = phi1LLDP(odeFcn_main,f1,h,hmin,t,y,ny,kdim,...
+         [phi,Fxphi,kerror,kdim,nexpcont,breakdown,knfeval,padepq,korder,h] = phi1LLDP(odeFcn_main,f1,h,hmin,t,y,ny,kdim,...
                 rtol,atol,kdmax,kdmin,gamma, 1);
          nfevals=nfevals+knfeval;
         reusedsubspace = reusedsubspace+1;

@@ -1,4 +1,4 @@
-function [phi, err, m, nexpo,breakdown,nfeval,padepq, proportion, jorder] = phi1LLDP1(func, b, h, hmin, t, y, normy, m, ...
+function [phi, err, m, nexpo,breakdown,nfeval,padepq, proportion, jorder,h] = phi1LLDP1(func, b, h, hmin, t, y, normy, m, ...
     rtol, atol,kdmax,kdmin, ...
     gamma, reuse)
 %PHI1LLDP_hJ_f Summary of this function goes here
@@ -215,8 +215,8 @@ while work
     normH = norm(H,'inf');
     nhC = h*normH;
     
-    if nhC > 600
-        hnew = max(600/normH,hmin);
+    if nhC > 1000
+        hnew = max(1000/normH,hmin);
         h= hnew;
         nhC = h*normH;
     end
