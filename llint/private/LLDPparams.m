@@ -33,10 +33,10 @@ end
 if isfield(options,'gamma')   % s could be empty.
   gamma = subsref(options, struct('type','.','subs','gamma'));
   if isempty(gamma)
-    gamma = 0.005;
+    gamma = 0.001;
   end
 else
-  gamma = 0.005;
+  gamma = 0.001;
 end
 
 if isfield(options,'jacgap')   % s could be empty.

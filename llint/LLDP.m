@@ -99,9 +99,7 @@ end
   options, threshold, rtol, normcontrol, normy, hmax, htry, htspan, dataType] = ...
   llargumentsfj(FcnHandlesUsed, solver_name, ode, tspan, ...
                 y0, options, varargin);
-[kdmax,~,~,~,~,~]=LLDPparams(options,neq);
-gamma=0.001;
-kdmin=5;
+[kdmax,kdmin,~,gamma,~,~]=LLDPparams(options,neq);
 nfevals = nfevals + 1;
 
 % Handle the output
@@ -146,7 +144,7 @@ if Mtype > 0  % non-trivial mass matrix
     error(message('llint:LLDP_Kphi1:MassSingularYes'));
   end
   % Incorporate the mass matrix into odeFcn and odeArgs.
-  [odeFcn,odeArgs] = llmassexplicit(FcnHandlesUsed,Mtype,odeFcn,odeArgs,Mfun,M);
+  [odeFcn,odeArgs] = llmassexplicit_fj(FcnHandlesUsed,Mtype,odeFcn,odeArgs,Mfun,M);
   f0 = feval(odeFcn,t0,y0,odeArgs{:});
   nfevals = nfevals + 1;
 end
