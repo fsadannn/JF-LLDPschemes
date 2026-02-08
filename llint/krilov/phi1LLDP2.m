@@ -202,8 +202,8 @@ while work
     normH = norm(H,'inf');
     nhC = h*normH;
     
-    if nhC > 600
-        hnew = max(600/normH,hmin);
+    if nhC > 1000
+        hnew = max(1000/normH,hmin);
         h= hnew;
         nhC = h*normH;
     end
