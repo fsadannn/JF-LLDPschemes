@@ -1,4 +1,4 @@
-function [phi, err, m, nexpo, breakdown, padepq,h] = phi1LLDP_hJ_f_gamma(A, b, h, hmin, y, hnormA, m, ...
+function [phi, err, m, nexpo, breakdown, padepq] = phi1LLDP_hJ_f_gamma(A, b, h, hmin, y, hnormA, m, ...
                                                  rtol, atol,kdmax,kdmin, ...
                                                  gamma, reuse)
 %PHI1LLDP_hJ_f Summary of this function goes here
@@ -141,17 +141,9 @@ work=1;
 
 while work
     % select p-p of Pade
-    normH = norm(H,'inf');
-    nhC = h*normH;
-    if nhC > 1000
-        hnew = max(1000/normH,hmin);
-        h= hnew;
-        nhC = h*normH;
-    end
-
-    nhC = cte*nhC;
-    col = sum(tolr>=rtol);
-    if col==0
+    nhC = h*cte*norm(H,'inf');
+    col = find(tolr>=rtol,1,'last');
+    if isempty(col)
         pd = 3;
     else
         fil = (nhC>=1)+1;
