@@ -32,7 +32,7 @@ end
 for j = 1:m
     %p = A*V(:,j);
     % order 2
-    p = feval(@FreeJ_f_w,2,func,y,V(:,j),t,delta,h2delta);
+    p = FreeJ_f_w(2,func,y,V(:,j),t,delta,h2delta);
     s = V(:,1:j);
     H(1:j,j) = s.'*p;
     p = p - s*H(1:j,j);
@@ -69,7 +69,7 @@ s = max(0,e+1);
 % exponential calculation
 pd=6;
 
-M1 = expm64v4(h.*H,pd,s);
+M1 = expm64v41(h.*H,pd,s);
 
 % calating \hat{E}
 M1(m+1,m+1) = hk*M1(m,m+2);
